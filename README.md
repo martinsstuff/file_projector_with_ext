@@ -11,6 +11,6 @@ Info:
 - Compares file contents using MD5 (because blake3 isn't in the standard library) ONLY on the initial sync.
 - Has a monitoring function that does stuff based on file modification dates.
 - Monitoring function is kinda sketchy, but I made it wait 5 seconds and do a full resync on error.
-- The monitor also makes sure the last modification date is >2 seconds to avoid copying files being actively modified to.
+- The monitor also makes sure the last modification date is >2 seconds to avoid copying files being actively modified.
 
-Some cleanup and testing still necessary :)
+**Warning:** The program was developed for personal use, I take no responsibility for anything going wrong. If you enter the wrong directory **or the program interprets it wrong**, it will happily and irrecoverably delete any item the program can access. Make sure your target_directory variable is set correctly, as it will delete any folder and file that isn't in source_directory!
