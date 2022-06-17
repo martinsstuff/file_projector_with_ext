@@ -36,9 +36,8 @@ def trim_folders():
 def trim_files():
     for i in glob.glob("**", root_dir=target_directory, recursive=True):
         tgt_path = os.path.join(target_directory, i)
-        # This may be an issue with long file_extensions and preexisting files, but it works for now, the program doesn't need to be security hardened.
         src_path = os.path.join(
-            source_directory, i[:-file_extension.__len__()])
+            source_directory, i.removesuffix(file_extension))
         if os.path.isfile(tgt_path) and not os.path.exists(src_path):
             print("Removing File: " + i)
             os.remove(tgt_path)
@@ -80,16 +79,15 @@ def monitoring():
     for i in glob.glob("**", root_dir=source_directory, recursive=True):
         src_path = os.path.join(source_directory, i)
         last_modified[i] = os.path.getmtime(src_path)
-    # For every item in source_directory, check if it has been modified since last_modified.
-    # Make sure that the last modified time for files is at least 2 seconds behind the current time, to avoid copying files that are being actively modified.
-    # Copy folders immediately
+    # For every item in source_directory, check if it has been modified since last_modified, or has been newly created (not in last_modified).
+    # For files, we wait a specified amount of time before copying. Folders get created immediately.
     while True:
         for i in glob.glob("**", root_dir=source_directory, recursive=True):
             src_path = os.path.join(source_directory, i)
             tgt_path_folder = os.path.join(target_directory, i)
             tgt_path_file = os.path.join(target_directory, i + file_extension)
             # Guard clause simulating .isfile and .isdir checks prior to .getmtime as we have elsewhere.
-            # We end up running the check twice but it's the cleanest solution I could come up with without having super long if statements.
+            # We end up running the check twice but it's the cleanest solution I could come up with without having long if statements.
             if not os.path.isfile(src_path) and not os.path.isdir(src_path):
                 continue
             if not i in last_modified or os.path.getmtime(src_path) > last_modified[i]:
@@ -103,15 +101,16 @@ def monitoring():
                                 print("New File: " + i + file_extension)
                             else:
                                 print("Updating File: " + i + file_extension)
-                            shutil.copy(src_path, tgt_path_file)
                             last_modified[i] = os.path.getmtime(src_path)
+                            shutil.copy(src_path, tgt_path_file)
                             break
                         else:
                             next_check = (os.path.getmtime(
                                 src_path) - datetime.now().timestamp()) + monitor_activity_delay
-                            print(f"Waiting {next_check:.2f} seconds for {i} to be updated.")
+                            print(
+                                f"Waiting {next_check:.2f} seconds while {i} is being modified.")
                             sleep(next_check)
-        # For every item in target_directory, check if it is still present in source_directory.
+        # For every item in target_directory, we check if it is still present in source_directory, and remove it if not.
         for i in glob.glob("**", root_dir=target_directory, recursive=True):
             tgt_path = os.path.join(target_directory, i)
             src_path_folder = os.path.join(source_directory, i)
@@ -140,6 +139,12 @@ def config_info():
 
 if __name__ == "__main__":
     config_info()
+    if not os.path.exists(source_directory):
+        print("Error: Configuration: Source Directory does not exist.")
+        exit(1)
+    if not os.path.exists(target_directory):
+        print("Error: Configuration: Target Directory does not exist.")
+        exit(1)
     print("Initializing...")
     initial_sync()
     print("Sync Complete")
@@ -152,7 +157,7 @@ if __name__ == "__main__":
                 print("Stopping Monitoring")
                 break
             except:
-                print("Error: Monitoring Error: Resyncing in 5 Seconds...")
+                print("Error: Monitoring: Resyncing in 5 Seconds...")
                 sleep(5)
                 initial_sync()
     print("Program Done")
